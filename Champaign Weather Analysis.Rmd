@@ -1,0 +1,216 @@
+---
+title: "STAT 578 - Homework 1"
+author: "Pulkit Dixit"
+date: "February 11, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This document contains analysis of weather data of Champaign, Illinois from 2014 to 2018 scraped using the Python library beautiful soup.
+
+```{r include=FALSE, message=FALSE, warning=FALSE}
+#Importing libraries:
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(ggalt)
+```
+
+### Data Import:
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Reading the file:
+weather = read.csv('C:/Users/Pulkit Dixit/Desktop/STAT 578/HW1/Data/STAT578_HW1.csv', header = TRUE, fill = TRUE)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Printing average high and low temperatures for January from 2014 to 2018:
+weather %>% 
+  select(Year, Month, High.Temperature, Low.Temperature) %>% 
+  group_by(Year, Month) %>% 
+  summarise(Mean_High_Temp = mean(High.Temperature), Mean_Low_Temp = mean(Low.Temperature)) %>% 
+  filter(Month %in% c('January')) %>% 
+  arrange(Year)
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Visualizing the above data:
+weather %>% 
+  select(Year, Month, High.Temperature, Low.Temperature) %>% 
+  group_by(Year, Month) %>% 
+  summarise(Mean_High_Temp = mean(High.Temperature), Mean_Low_Temp = mean(Low.Temperature)) %>% 
+  filter(Month %in% c('January')) %>% 
+  arrange(Year) %>%
+  ggplot(aes(x = Year, y = Mean_High_Temp)) +
+  geom_line(col='red') +
+  geom_point(col = 'red', size = 3) +
+  geom_line(aes(y = Mean_Low_Temp), col='skyblue') + 
+  geom_point(aes(y = Mean_Low_Temp), col='skyblue', size = 3) +
+  xlab('Month and Year') + 
+  scale_x_continuous(labels =c('2014' = 'January 2014', '2015' = 'January 2015', '2016' = 'January 2016', '2017' = 'January 2017', '2018' = 'January 2018')) +
+  ylab('Average High and Low Temperatures') + 
+  ggtitle('Average High and Low Temperatures \nfor January from 2014 to 2018') + 
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank()) 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8}
+#Monthly temperature variations:
+weather %>% 
+  select(Year, Month, High.Temperature, Low.Temperature) %>% 
+  group_by(Year, Month) %>% 
+  summarise(Mean_High_Temp = mean(High.Temperature), Mean_Low_Temp = mean(Low.Temperature)) %>% 
+  arrange(Year) %>%
+  ggplot(aes(x=Mean_Low_Temp, xend=Mean_High_Temp, y=factor(Month, levels = month.name), group=Month)) + 
+        geom_dumbbell(color='darkolivegreen4', 
+                      size=1.5) + 
+        labs(x='High and Low Temperatures', 
+             y='Month', 
+             title='Annual Trends for Average Monthly \nHigh and Low Temperatures') +
+        theme(plot.title = element_text(hjust=0.5),
+              plot.background=element_rect(fill='#f7f7f7'),
+              panel.background=element_rect(fill='#f7f7f7'),
+              panel.grid.minor=element_blank(),
+              axis.ticks=element_blank()) +
+    coord_flip() + 
+    facet_wrap(~Year, ncol = 1, scales = 'free') 
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Boxplot:
+weather %>% 
+  select(Year, High.Temperature, Low.Temperature) %>% 
+  mutate(Diff_High_Low = High.Temperature-Low.Temperature) %>% 
+  ggplot(aes(x=as.factor(Year), y=Diff_High_Low, fill=as.factor(Year))) + 
+  geom_boxplot(show.legend = FALSE) +
+  xlab('Year') + 
+  ylab('High - Low') + 
+  ggtitle('Boxplot: Year vs Difference in \nHigh and Low Temperatures') + 
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank()) 
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8}
+#Daily temperature variations:
+weather %>% 
+  select(Year, Month, High.Temperature, Low.Temperature) %>% 
+  #filter(Year == 2014) %>% 
+  group_by(Year) %>%
+  mutate(Day_of_Year = row_number()) %>%
+  ggplot(aes(x=Day_of_Year, y=High.Temperature)) +
+  geom_line(col='red') +
+  geom_line(aes(y=Low.Temperature), col='skyblue') +
+  xlab('Day of Year') + 
+  ylab('High and Low Temperature') + 
+  ggtitle('Annual Temperature Trends') + 
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank()) + 
+  facet_wrap(~Year, ncol = 1, scales = "free")
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#T -> 0 for snowfall and rainfall:
+weather$Snowfall = as.numeric(as.character(replace(weather$Snowfall, weather$Snowfall=='T', 0)))
+weather$Precipitation = as.numeric(as.character(replace(weather$Precipitation, weather$Precipitation=='T', 0)))
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Annual snowfall
+weather %>% select(Year, Snowfall) %>% 
+  group_by(Year) %>% 
+  summarise(Total_Snowfall = sum(Snowfall)) %>% 
+  ggplot(aes(x=as.factor(Year), y=Total_Snowfall)) + 
+  geom_bar(fill='sandybrown', stat='identity') +
+  xlab('Year') + 
+  ylab('Amount of Snowfall') + 
+  ggtitle('Amount of Snowfall per Year') + 
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank())
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+#Annual rainfall:
+weather %>% select(Year, Precipitation) %>% 
+  group_by(Year) %>% 
+  summarise(Total_Precipitation = sum(Precipitation)) %>% 
+  ggplot(aes(x=as.factor(Year), y=Total_Precipitation)) + 
+  geom_bar(fill="salmon", stat='identity') + 
+  xlab('Year') + 
+  ylab('Amount of Precipitation') + 
+  ggtitle('Amount of Precipitation per Year') +  
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank())
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8}
+#Monthly rainfall:
+weather %>% 
+  select(Year, Month, Precipitation) %>% 
+  mutate(Count_Precp = as.numeric(Precipitation != 0)) %>% 
+  group_by(Year, Month) %>% 
+  summarise(No_Days_Rained = sum(Count_Precp)) %>% 
+  #filter(Year %in% c(2014)) %>% 
+  ggplot(aes(x=factor(Month, levels = month.name), y=No_Days_Rained, group=1)) + 
+  geom_area(fill='salmon') +
+  facet_wrap(~Year, ncol = 1, scales = 'free') +
+  xlab('Month') + 
+  ylab('Number of Days of Rainfall') + 
+  ggtitle('Monthly Distribution of Frequency of Rainfall') + 
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank()) 
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, fig.height=10, fig.width=8}
+weather %>% 
+  select(Year, Month, Snowfall) %>% 
+  mutate(Count_Snow = as.numeric(Snowfall != 0)) %>% 
+  group_by(Year, Month) %>% 
+  summarise(No_Days_Snowed = sum(Count_Snow)) %>% 
+  #filter(Year %in% c(2014)) %>% 
+  ggplot(aes(x=factor(Month, levels = month.name), y=No_Days_Snowed, group=1)) + 
+  geom_area(fill='sandybrown') +
+  facet_wrap(~Year, ncol = 1, scales = 'free') +
+  xlab('Month') + 
+  ylab('Number of Days of Snowfall') + 
+  ggtitle('Monthly Distribution of Frequency of Snowfall') + 
+  theme(legend.position = 'none', 
+        plot.title = element_text(hjust = 0.5),
+        plot.background=element_rect(fill='#f7f7f7'),
+        panel.background=element_rect(fill='#f7f7f7'),
+        panel.grid.minor=element_blank(),
+        axis.ticks=element_blank()) 
+```
+
+
+
+
